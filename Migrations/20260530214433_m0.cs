@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace RRHH.Migrations
 {
     /// <inheritdoc />
-    public partial class mLogin : Migration
+    public partial class m0 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
