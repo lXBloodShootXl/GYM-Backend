@@ -106,7 +106,7 @@ app.UseSwaggerUI(c =>
 
 // Middleware
 app.UseCors("MyApp");
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 
