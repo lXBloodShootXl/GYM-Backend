@@ -1,5 +1,4 @@
-using GYM.Core.Interfaces;
-using GYM.Core.Models;
+using DTOS;
 using GYM.Infraestructura.Data;
 using Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -16,11 +15,22 @@ namespace GYM.Infraestructura.Repositorio
             _context = context;
         }
 
-        public async Task<List<Ventas>> ListaVentas()
+        public async Task<List<VentasDTO>> ListaVentas()
         {
             return await _context.Ventas
                 .Include(v => v.Empleado)
+                    .ThenInclude(e => e.persona)
+
                 .Include(v => v.Cliente)
+                    .ThenInclude(c => c.persona)
+
+                .Select(v => new VentasDTO
+                {
+                    codigo = v.codigo,
+                    fecha = v.fecha,
+                    ciEmpleado = v.Empleado.persona.ci,
+                    ciCliente = v.Cliente.persona.ci
+                })
                 .ToListAsync();
         }
 

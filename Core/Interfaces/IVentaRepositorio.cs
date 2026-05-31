@@ -5,7 +5,7 @@ namespace Interfaces
 {
     public interface IVentaRepositorio
     {
-        Task<List<Ventas>> ListaVentas();
+        Task<List<VentasDTO>> ListaVentas();
 
         Task<Ventas?> BuscarVenta(int id);
 
