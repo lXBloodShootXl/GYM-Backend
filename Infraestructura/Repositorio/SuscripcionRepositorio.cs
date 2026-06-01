@@ -20,11 +20,11 @@ namespace GYM.Infraestructura.Repositorio
         {
             return await (
                 from s in _context.Suscripciones.AsNoTracking()
-                join c in _context.Clientes
+                join c in _context.Clientes.AsNoTracking()
                     on s.id_cliente equals c.id_cliente
-                join p in _context.Personas
+                join p in _context.Personas.AsNoTracking()
                     on c.id_persona equals p.id_persona
-                join m in _context.Membresias
+                join m in _context.Membresias.AsNoTracking()
                     on s.id_membresia equals m.id_membresia
                 where
                     p.ci == ci &&
@@ -42,17 +42,18 @@ namespace GYM.Infraestructura.Repositorio
                 }
             ).ToListAsync();
         }
+
         public async Task<List<SuscripcionDTO>> GetSuscripcionMembresia(
             string ci,
             string codigo)
         {
             return await (
                 from s in _context.Suscripciones.AsNoTracking()
-                join c in _context.Clientes
+                join c in _context.Clientes.AsNoTracking()
                     on s.id_cliente equals c.id_cliente
-                join p in _context.Personas
+                join p in _context.Personas.AsNoTracking()
                     on c.id_persona equals p.id_persona
-                join m in _context.Membresias
+                join m in _context.Membresias.AsNoTracking()
                     on s.id_membresia equals m.id_membresia
                 where
                     p.ci == ci &&
@@ -76,11 +77,11 @@ namespace GYM.Infraestructura.Repositorio
         {
             return await (
                 from s in _context.Suscripciones.AsNoTracking()
-                join c in _context.Clientes
+                join c in _context.Clientes.AsNoTracking()
                     on s.id_cliente equals c.id_cliente
-                join p in _context.Personas
+                join p in _context.Personas.AsNoTracking()
                     on c.id_persona equals p.id_persona
-                join m in _context.Membresias
+                join m in _context.Membresias.AsNoTracking()
                     on s.id_membresia equals m.id_membresia
                 where
                     s.estado &&
@@ -102,11 +103,11 @@ namespace GYM.Infraestructura.Repositorio
         {
             return await (
                 from s in _context.Suscripciones.AsNoTracking()
-                join c in _context.Clientes
+                join c in _context.Clientes.AsNoTracking()
                     on s.id_cliente equals c.id_cliente
-                join p in _context.Personas
+                join p in _context.Personas.AsNoTracking()
                     on c.id_persona equals p.id_persona
-                join m in _context.Membresias
+                join m in _context.Membresias.AsNoTracking()
                     on s.id_membresia equals m.id_membresia
                 where !s.estado
                 select new SuscripcionDTO
@@ -120,11 +121,11 @@ namespace GYM.Infraestructura.Repositorio
             ).ToListAsync();
         }
 
-        public async Task<SuscripcionDTO> PostSuscripcion(
-    string ci,
-    string codigo,
-    string fecha_inicio,
-    string fecha_fin)
+        public async Task<SuscripcionDTO?> PostSuscripcion(
+            string ci,
+            string codigo,
+            string fecha_inicio,
+            string fecha_fin)
         {
             if (
                 string.IsNullOrWhiteSpace(ci) ||
@@ -140,9 +141,12 @@ namespace GYM.Infraestructura.Repositorio
             if (fechaInicio == null || fechaFin == null)
                 return null;
 
+            if (fechaFin.Value < fechaInicio.Value)
+                return null;
+
             var cliente = await (
-                from c in _context.Clientes
-                join p in _context.Personas
+                from c in _context.Clientes.AsNoTracking()
+                join p in _context.Personas.AsNoTracking()
                     on c.id_persona equals p.id_persona
                 where
                     p.ci == ci &&
@@ -155,6 +159,7 @@ namespace GYM.Infraestructura.Repositorio
                 return null;
 
             var membresia = await _context.Membresias
+                .AsNoTracking()
                 .FirstOrDefaultAsync(x =>
                     x.codigo == codigo &&
                     x.estado);
@@ -194,7 +199,7 @@ namespace GYM.Infraestructura.Repositorio
             };
         }
 
-        public async Task<SuscripcionDTO> PutSuscripcion(
+        public async Task<SuscripcionDTO?> PutSuscripcion(
             string ci,
             string codigo,
             string fecha_inicio,
@@ -214,6 +219,9 @@ namespace GYM.Infraestructura.Repositorio
             if (fechaInicio == null || fechaFin == null)
                 return null;
 
+            if (fechaFin.Value < fechaInicio.Value)
+                return null;
+
             var data = await (
                 from s in _context.Suscripciones
                 join c in _context.Clientes
@@ -230,7 +238,8 @@ namespace GYM.Infraestructura.Repositorio
                 select new
                 {
                     Suscripcion = s,
-                    Membresia = m
+                    Membresia = m,
+                    Persona = p
                 }
             ).FirstOrDefaultAsync();
 
@@ -243,7 +252,7 @@ namespace GYM.Infraestructura.Repositorio
 
             return new SuscripcionDTO
             {
-                ci = ci,
+                ci = data.Persona.ci,
                 codigo = data.Membresia.codigo,
                 nombre = data.Membresia.nombre,
                 fecha_inicio = data.Suscripcion.fecha_inicio,
@@ -251,11 +260,11 @@ namespace GYM.Infraestructura.Repositorio
             };
         }
 
-        public async Task<SuscripcionDTO> DeleteSuscripcion(
+        public async Task<SuscripcionDTO?> DeleteSuscripcion(
             string ci,
             string codigo)
         {
-            var entity = await (
+            var data = await (
                 from s in _context.Suscripciones
                 join c in _context.Clientes
                     on s.id_cliente equals c.id_cliente
@@ -267,29 +276,38 @@ namespace GYM.Infraestructura.Repositorio
                     p.ci == ci &&
                     m.codigo == codigo &&
                     s.estado
-                select s
+                select new
+                {
+                    Suscripcion = s,
+                    Membresia = m,
+                    Persona = p
+                }
             ).FirstOrDefaultAsync();
 
-            if (entity == null)
+            if (data == null)
                 return null;
 
-            entity.estado = false;
+            var dto = new SuscripcionDTO
+            {
+                ci = data.Persona.ci,
+                codigo = data.Membresia.codigo,
+                nombre = data.Membresia.nombre,
+                fecha_inicio = data.Suscripcion.fecha_inicio,
+                fecha_fin = data.Suscripcion.fecha_fin
+            };
+
+            data.Suscripcion.estado = false;
 
             await _context.SaveChangesAsync();
 
-            var r = await GetSuscripcionMembresia(ci, codigo)
-                .ContinueWith(x => x.Result.FirstOrDefault());
-            if (r == null)
-                return null;
-            else
-                return r;
+            return dto;
         }
 
         public async Task<SuscripcionDTO?> HabilitarSuscripcion(
             string ci,
             string codigo)
         {
-            var entity = await (
+            var data = await (
                 from s in _context.Suscripciones
                 join c in _context.Clientes
                     on s.id_cliente equals c.id_cliente
@@ -301,18 +319,29 @@ namespace GYM.Infraestructura.Repositorio
                     p.ci == ci &&
                     m.codigo == codigo &&
                     !s.estado
-                select s
+                select new
+                {
+                    Suscripcion = s,
+                    Membresia = m,
+                    Persona = p
+                }
             ).FirstOrDefaultAsync();
 
-            if (entity == null)
+            if (data == null)
                 return null;
 
-            entity.estado = true;
+            data.Suscripcion.estado = true;
 
             await _context.SaveChangesAsync();
 
-            return await GetSuscripcionMembresia(ci, codigo)
-                .ContinueWith(x => x.Result.FirstOrDefault());
+            return new SuscripcionDTO
+            {
+                ci = data.Persona.ci,
+                codigo = data.Membresia.codigo,
+                nombre = data.Membresia.nombre,
+                fecha_inicio = data.Suscripcion.fecha_inicio,
+                fecha_fin = data.Suscripcion.fecha_fin
+            };
         }
     }
 }
